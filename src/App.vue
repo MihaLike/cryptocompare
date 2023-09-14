@@ -22,6 +22,12 @@
                 placeholder="Например DOGE"
               />
             </div>
+            <div
+              v-if="errorStatus"
+              class="bg-red-100 border border-red-400 text-red-700 px-4 py-1 rounded relative"
+            >
+              {{ error }}
+            </div>
             <ul
               v-if="last4FilteredCoins.length"
               class="flex"
@@ -77,7 +83,10 @@
           </button>
           <div>
             Фильтр:
-            <input v-model="filter" />
+            <input
+              v-model="filter"
+              class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md w-20"
+            />
           </div>
         </div>
 
@@ -170,7 +179,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, Ref, ref, watch } from 'vue'
-import { AUTHORIZATION_API_KEY } from '@/utils/constants'
+import { AUTHORIZATION_API_KEY, VALID_KEYS } from '@/utils/constants'
 
 // State
 const ticker = ref('')
@@ -180,6 +189,9 @@ const graph: Ref<Array<number>> = ref([])
 const coinsListData = ref(null)
 const currentPage = ref(1)
 const filter = ref('')
+
+const error = ref('')
+const errorStatus = ref(false)
 
 // Computed
 const startIndex = computed(() => (currentPage.value - 1) * 6)
@@ -231,11 +243,33 @@ const add = () => {
   }
   // No equal tickers
   if (tickers.value.find((ticker) => ticker.name === currentTicker.name)) {
+    errorOccur('Данный тикер уже есть')
+    return
+  }
+
+  // || no empty tickers
+  if (!currentTicker.name.length) {
+    errorOccur('Введите название тикера')
+    return
+  }
+
+  // || no unexisting tickers
+  if (coinsList.value.findIndex((ticker) => ticker === currentTicker.name) < 0) {
+    errorOccur('Данного тикера не существует')
     return
   }
 
   tickers.value.push(currentTicker)
   subscribeToUpdates(currentTicker.name)
+}
+
+const errorOccur = async (text: string) => {
+  errorStatus.value = true
+  error.value = text
+  setTimeout(() => {
+    error.value = ''
+    errorStatus.value = false
+  }, 3000)
 }
 
 const subscribeToUpdates = (tickerName: string) => {
@@ -302,8 +336,6 @@ const loadTickers = () => {
 const loadPreviousState = () => {
   const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
 
-  const VALID_KEYS = ['filter', 'page']
-
   VALID_KEYS.forEach((key) => {
     if (windowData[key]) {
       if (key === 'filter') {
@@ -349,3 +381,9 @@ loadAllCoins()
 loadTickers()
 loadPreviousState()
 </script>
+
+<style scoped>
+* {
+  user-select: none;
+}
+</style>
