@@ -179,7 +179,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, Ref, ref, watch } from 'vue'
-import { AUTHORIZATION_API_KEY, VALID_KEYS } from '@/utils/constants'
+import { VALID_KEYS } from '@/utils/constants'
+import { loadCoinsPrice, loadCoinsList } from '@/composables/api'
 
 // State
 const ticker = ref('')
@@ -238,7 +239,7 @@ const normalizedGraph = computed(() => {
 // Methods
 const add = () => {
   const currentTicker = {
-    name: ticker.value,
+    name: ticker.value.toUpperCase(),
     price: '-'
   }
   // No equal tickers
@@ -260,7 +261,7 @@ const add = () => {
   }
 
   tickers.value.push(currentTicker)
-  subscribeToUpdates(currentTicker.name)
+  ticker.value = ''
 }
 
 const errorOccur = async (text: string) => {
@@ -272,24 +273,20 @@ const errorOccur = async (text: string) => {
   }, 3000)
 }
 
-const subscribeToUpdates = (tickerName: string) => {
+const updateTickersPrice = async () => {
   setInterval(async () => {
-    const data = await fetch(
-      `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=${AUTHORIZATION_API_KEY}`
-    ).then((resp) => {
-      return resp.json()
-    })
+    const coinsData = await loadCoinsPrice(tickers.value)
+    Object.entries(coinsData).forEach(([name, price]) => {
+      tickers.value.find((t) => t.name === name).price =
+        price.USD > 1 ? price.USD.toFixed(2) : price.USD.toPrecision(2)
 
-    tickers.value.find((t) => t.name === tickerName).price =
-      data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
-
-    if (selectedTicker.value) {
-      if (selectedTicker?.value.name === tickerName) {
-        graph.value.push(data.USD)
+      if (selectedTicker.value) {
+        if (selectedTicker?.value.name === name) {
+          graph.value.push(price.USD)
+        }
       }
-    }
+    })
   }, 5000)
-  ticker.value = ''
 }
 
 const select = (ticker) => {
@@ -307,33 +304,19 @@ const chooseHelper = (helper) => {
   ticker.value = helper
 }
 
-const loadAllCoins = () => {
-  fetch('https://min-api.cryptocompare.com/data/blockchain/list', {
-    method: 'GET',
-    headers: {
-      authorization: `Apikey ${AUTHORIZATION_API_KEY}`
-    }
-  })
-    .then((resp) => {
-      return resp.json()
-    })
-    .then((json) => {
-      // console.log('Resp', json.Data)
-      coinsListData.value = json.Data
-    })
+const getAllCoins = async () => {
+  const allCoinsData = await loadCoinsList()
+  coinsListData.value = allCoinsData
 }
 
-const loadTickers = () => {
+const getTickers = () => {
   const tickersData = localStorage.getItem('cryptonomicon-list')
   if (tickersData) {
     tickers.value = JSON.parse(tickersData)
-    tickers.value.forEach((ticker) => {
-      subscribeToUpdates(ticker.name)
-    })
   }
 }
 
-const loadPreviousState = () => {
+const getPreviousState = () => {
   const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
 
   VALID_KEYS.forEach((key) => {
@@ -377,9 +360,10 @@ watch(
 )
 
 // On create
-loadAllCoins()
-loadTickers()
-loadPreviousState()
+getAllCoins()
+getTickers()
+getPreviousState()
+updateTickersPrice()
 </script>
 
 <style scoped>
