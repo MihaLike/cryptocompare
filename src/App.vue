@@ -3,15 +3,15 @@
     <div class="container">
       <div class="w-full my-4"></div>
       <section>
-        <div class="flex">
-          <div class="max-w-xs">
+        <div class="flex items-center relative">
+          <div class="max-w-xs mr-3">
             <label
               for="wallet"
-              class="block text-sm font-medium text-gray-700"
+              class="block text-sm font-medium text-gray-700 mb-4"
             >
-              Тикер
+              Добавить тикер:
             </label>
-            <div class="mt-1 relative rounded-md shadow-md">
+            <div class="w-25 mt-1 mb-1 relative rounded-md shadow-md">
               <input
                 v-model="ticker"
                 @keydown.enter="add"
@@ -24,44 +24,41 @@
             </div>
             <div
               v-if="errorStatus"
-              class="bg-red-100 border border-red-400 text-red-700 px-4 py-1 rounded relative"
+              class="bg-red-100 border border-red-400 text-red-700 px-4 py-1 rounded absolute bottom-12"
             >
               {{ error }}
             </div>
-            <ul
-              v-if="last4FilteredCoins.length"
-              class="flex"
-            >
+            <ul class="flex h-10 mb-11">
               <li
                 v-for="(helper, index) of last4FilteredCoins"
                 :key="index"
                 @click="chooseHelper(helper)"
-                class="text-white bg-gray-700 p-2 m-1 shadow-sm rounded-full"
+                class="flex items-center text-white bg-gray-700 p-2 m-1 h-8 shadow-sm rounded-full"
               >
                 {{ helper }}
               </li>
             </ul>
+            <button
+              @click="add"
+              type="button"
+              class="h-10 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            >
+              <svg
+                class="-ml-0.5 mr-2 h-6 w-6"
+                xmlns="http://www.w3.org/2000/svg"
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                fill="#ffffff"
+              >
+                <path
+                  d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
+                ></path>
+              </svg>
+              Добавить
+            </button>
           </div>
         </div>
-        <button
-          @click="add"
-          type="button"
-          class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        >
-          <svg
-            class="-ml-0.5 mr-2 h-6 w-6"
-            xmlns="http://www.w3.org/2000/svg"
-            width="30"
-            height="30"
-            viewBox="0 0 24 24"
-            fill="#ffffff"
-          >
-            <path
-              d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-            ></path>
-          </svg>
-          Добавить
-        </button>
       </section>
 
       <template v-if="tickers.length">
@@ -82,10 +79,16 @@
             Вперед
           </button>
           <div>
-            Фильтр:
+            <label
+              for="filter"
+              class="block text-sm font-medium text-gray-700 mb-4"
+            >
+              Фильтр:
+            </label>
             <input
               v-model="filter"
-              class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md w-20"
+              class="block w-48 pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md w-20"
+              name="filter"
             />
           </div>
         </div>
@@ -96,9 +99,9 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': selectedTicker === t
+              'outline outline-purple-800': selectedTicker === t
             }"
-            class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+            class="bg-white overflow-hidden shadow rounded-lg cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
@@ -180,7 +183,11 @@
 <script setup lang="ts">
 import { computed, onMounted, Ref, ref, watch } from 'vue'
 import { VALID_KEYS } from '@/utils/constants'
-import { loadCoinsPrice, loadCoinsList } from '@/composables/api'
+import {
+  subscribeUpdateTickerPrice,
+  unsubscribeUpdateTickerPrice,
+  loadCoinsList
+} from '@/composables/api'
 
 // State
 const ticker = ref('')
@@ -221,7 +228,7 @@ const coinsList = computed(() => {
 })
 
 const filteredCoinsList = computed(() =>
-  coinsList.value.filter((coin) => coin.includes(ticker.value.toUpperCase()))
+  coinsList.value.filter((coin) => coin.includes(ticker.value.toUpperCase().trim()))
 )
 
 const last4FilteredCoins = computed(() => filteredCoinsList.value.slice(0, 4))
@@ -261,7 +268,9 @@ const add = () => {
   }
 
   tickers.value.push(currentTicker)
+  subscribeUpdateTickerPrice(currentTicker, updateTicker)
   ticker.value = ''
+  filter.value = ''
 }
 
 const errorOccur = async (text: string) => {
@@ -273,24 +282,10 @@ const errorOccur = async (text: string) => {
   }, 3000)
 }
 
-const updateTickersPrice = async () => {
-  setInterval(async () => {
-    const coinsData = await loadCoinsPrice(tickers.value)
-    Object.entries(coinsData).forEach(([name, price]) => {
-      tickers.value.find((t) => t.name === name).price =
-        price.USD > 1 ? price.USD.toFixed(2) : price.USD.toPrecision(2)
-
-      if (selectedTicker.value) {
-        if (selectedTicker?.value.name === name) {
-          graph.value.push(price.USD)
-        }
-      }
-    })
-  }, 5000)
-}
-
 const select = (ticker) => {
-  selectedTicker.value = ticker
+  if (selectedTicker.value === ticker) {
+    selectedTicker.value = ''
+  } else selectedTicker.value = ticker
 }
 
 const handleDelete = (tickerToRemove) => {
@@ -298,6 +293,7 @@ const handleDelete = (tickerToRemove) => {
   if (selectedTicker.value === tickerToRemove) {
     selectedTicker.value = null
   }
+  unsubscribeUpdateTickerPrice(tickerToRemove)
 }
 
 const chooseHelper = (helper) => {
@@ -309,10 +305,19 @@ const getAllCoins = async () => {
   coinsListData.value = allCoinsData
 }
 
-const getTickers = () => {
+const getSavedTickers = () => {
   const tickersData = localStorage.getItem('cryptonomicon-list')
   if (tickersData) {
     tickers.value = JSON.parse(tickersData)
+    tickers.value.forEach((ticker) => subscribeUpdateTickerPrice(ticker, updateTicker))
+  }
+}
+
+const updateTicker = (tickerName, newPrice) => {
+  const currentTicker = tickers.value.find((t) => t.name === tickerName)
+  currentTicker.price = newPrice
+  if (currentTicker == selectedTicker.value) {
+    graph.value.push(newPrice)
   }
 }
 
@@ -361,9 +366,8 @@ watch(
 
 // On create
 getAllCoins()
-getTickers()
+getSavedTickers()
 getPreviousState()
-updateTickersPrice()
 </script>
 
 <style scoped>
