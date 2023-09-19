@@ -33,7 +33,7 @@
                 v-for="(helper, index) of last4FilteredCoins"
                 :key="index"
                 @click="chooseHelper(helper)"
-                class="flex items-center text-white bg-gray-700 p-2 m-1 h-8 shadow-sm rounded-full"
+                class="flex items-center text-white bg-gray-700 p-2 m-1 h-8 shadow-sm rounded-full cursor-pointer hover:bg-gray-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
                 {{ helper }}
               </li>
@@ -41,7 +41,7 @@
             <button
               @click="add"
               type="button"
-              class="h-10 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              class="h-10 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
             >
               <svg
                 class="-ml-0.5 mr-2 h-6 w-6"
@@ -99,20 +99,25 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'outline outline-purple-800': selectedTicker === t
+              'outline outline-purple-800': selectedTicker === t,
+              'bg-red-200': wrongTickers?.find((wt) => wt === t)
             }"
-            class="bg-white overflow-hidden shadow rounded-lg cursor-pointer"
+            class="flex flex-col justify-between bg-white overflow-hidden shadow rounded-lg cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">
+              <dd
+                class="mt-1 text-3xl font-semibold text-gray-900"
+                :class="{
+                  'text-base': wrongTickers?.find((wt) => wt === t)
+                }"
+              >
                 {{ t.price }}
               </dd>
             </div>
-            <div class="w-full border-t border-gray-200"></div>
             <button
               @click.stop="handleDelete(t)"
-              class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
+              class="flex items-center justify-center w-full border-t border-gray-200 font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-red-800 hover:bg-gray-200 hover:opacity-80 transition-all focus:outline-none"
             >
               <svg
                 class="h-5 w-5"
@@ -193,6 +198,7 @@ import {
 const ticker = ref('')
 const tickers = ref([])
 const selectedTicker = ref(null)
+const wrongTickers = ref([])
 const graph: Ref<Array<number>> = ref([])
 const coinsListData = ref(null)
 const currentPage = ref(1)
@@ -223,13 +229,18 @@ const pageStateOptions = computed(() => {
 
 // All coins list
 const coinsList = computed(() => {
-  if (coinsListData.value) return Object.keys(coinsListData.value)
+  if (coinsListData.value)
+    return ['BTC', 'ETH', 'PEPE', 'DOGE'].concat(Object.keys(coinsListData.value))
   else return []
 })
 
-const filteredCoinsList = computed(() =>
-  coinsList.value.filter((coin) => coin.includes(ticker.value.toUpperCase().trim()))
-)
+const filteredCoinsList = computed(() => {
+  const filtered = coinsList.value.filter((coin) =>
+    coin.includes(ticker.value.toUpperCase().trim())
+  )
+  // Uniq coins
+  return Array.from(new Set(filtered))
+})
 
 const last4FilteredCoins = computed(() => filteredCoinsList.value.slice(0, 4))
 
@@ -262,10 +273,10 @@ const add = () => {
   }
 
   // || no unexisting tickers
-  if (coinsList.value.findIndex((ticker) => ticker === currentTicker.name) < 0) {
-    errorOccur('Данного тикера не существует')
-    return
-  }
+  // if (coinsList.value.findIndex((ticker) => ticker === currentTicker.name) < 0) {
+  //   errorOccur('Данного тикера не существует')
+  //   return
+  // }
 
   tickers.value.push(currentTicker)
   subscribeUpdateTickerPrice(currentTicker, updateTicker)
@@ -313,8 +324,15 @@ const getSavedTickers = () => {
   }
 }
 
-const updateTicker = (tickerName, newPrice) => {
+const updateTicker = (tickerName, newPrice, state) => {
   const currentTicker = tickers.value.find((t) => t.name === tickerName)
+
+  if (state === 'ERROR') {
+    wrongTickers.value.push(currentTicker)
+    currentTicker.price = 'Нет данных'
+    return
+  }
+
   currentTicker.price = newPrice
   if (currentTicker == selectedTicker.value) {
     graph.value.push(newPrice)

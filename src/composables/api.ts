@@ -47,16 +47,45 @@ export const loadCoinsList = async () =>
 
 // WebSocket
 const AGGREGATE_INDEX = '5'
+const ERROR_INDEX = '500'
+// const MAX_SOCKETS_LIMIT = '429'
+
+// broadcast channel
+const bc = new BroadcastChannel('price_channel')
+
+bc.onmessage = (event) => {
+  const { currency, newPrice, errorState } = event.data
+  const handlers = tickersHandlers.get(currency) ?? []
+  handlers.forEach((fn) => fn(currency, newPrice, errorState))
+}
+
 const ws = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${AUTHORIZATION_API_KEY}`)
 
 ws.addEventListener('message', (e) => {
   const { TYPE: type, FROMSYMBOL: currency, PRICE: newPrice } = JSON.parse(e.data)
+  let errorState = 'OK'
+  if (type === ERROR_INDEX) {
+    const { PARAMETER } = JSON.parse(e.data)
+    const currencyWithError = PARAMETER.split('~')[2]
+    errorState = 'ERROR'
+    const handlers = tickersHandlers.get(currencyWithError) ?? []
+    handlers.forEach((fn) => fn(currencyWithError, newPrice, errorState))
+    return
+  }
+
+  // if (type === MAX_SOCKETS_LIMIT) {
+  //   console.log('MAX_SOCKETS_LIMIT')
+  //   // worker.postMessage(type)
+  // }
+
   if (type !== AGGREGATE_INDEX || newPrice === undefined) {
     return
   }
 
   const handlers = tickersHandlers.get(currency) ?? []
-  handlers.forEach((fn) => fn(currency, newPrice))
+  handlers.forEach((fn) => fn(currency, newPrice, errorState))
+  // bc channel
+  bc.postMessage({ currency, newPrice, errorState })
 })
 // }
 
