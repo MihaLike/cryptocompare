@@ -48,7 +48,7 @@ export const loadCoinsList = async () =>
 // WebSocket
 const AGGREGATE_INDEX = '5'
 const ERROR_INDEX = '500'
-// const MAX_SOCKETS_LIMIT = '429'
+const MAX_SOCKETS_LIMIT = '429'
 
 // broadcast channel
 const bc = new BroadcastChannel('price_channel')
@@ -70,13 +70,14 @@ ws.addEventListener('message', (e) => {
     errorState = 'ERROR'
     const handlers = tickersHandlers.get(currencyWithError) ?? []
     handlers.forEach((fn) => fn(currencyWithError, newPrice, errorState))
+    bc.postMessage({ currencyWithError, newPrice, errorState })
     return
   }
 
-  // if (type === MAX_SOCKETS_LIMIT) {
-  //   console.log('MAX_SOCKETS_LIMIT')
-  //   // worker.postMessage(type)
-  // }
+  if (type === MAX_SOCKETS_LIMIT) {
+    console.log('MAX_SOCKETS_LIMIT')
+    // worker.postMessage(type)
+  }
 
   if (type !== AGGREGATE_INDEX || newPrice === undefined) {
     return

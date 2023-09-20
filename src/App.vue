@@ -98,18 +98,25 @@
             v-for="t in paginatedTickers"
             :key="t.name"
             @click="select(t)"
+            class="flex flex-col justify-between bg-white overflow-hidden shadow rounded-lg cursor-pointer"
             :class="{
               'outline outline-purple-800': selectedTicker === t,
-              'bg-red-200': wrongTickers?.find((wt) => wt === t)
+              'bg-red-500': wrongTickers?.find((wt) => wt === t)
             }"
-            class="flex flex-col justify-between bg-white overflow-hidden shadow rounded-lg cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
-              <dt class="text-sm font-medium text-gray-500 truncate">{{ t.name }} - USD</dt>
+              <dt
+                class="text-sm font-medium text-gray-500 truncate"
+                :class="{
+                  'text-black': wrongTickers?.find((wt) => wt === t)
+                }"
+              >
+                {{ t.name }} - USD
+              </dt>
               <dd
                 class="mt-1 text-3xl font-semibold text-gray-900"
                 :class="{
-                  'text-base': wrongTickers?.find((wt) => wt === t)
+                  'text-base text-black': wrongTickers?.find((wt) => wt === t)
                 }"
               >
                 {{ t.price }}
@@ -145,7 +152,10 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          class="flex items-end border-gray-600 border-b border-l h-64"
+          ref="graphEl"
+        >
           <div
             v-for="(bar, idx) in normalizedGraph"
             :key="idx"
@@ -186,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, Ref, ref, watch } from 'vue'
+import { computed, onMounted, onUpdated, onBeforeUnmount, Ref, ref, watch, nextTick } from 'vue'
 import { VALID_KEYS } from '@/utils/constants'
 import {
   subscribeUpdateTickerPrice,
@@ -200,6 +210,8 @@ const tickers = ref([])
 const selectedTicker = ref(null)
 const wrongTickers = ref([])
 const graph: Ref<Array<number>> = ref([])
+const graphEl = ref()
+const mapGraphEl = ref(1)
 const coinsListData = ref(null)
 const currentPage = ref(1)
 const filter = ref('')
@@ -296,7 +308,9 @@ const errorOccur = async (text: string) => {
 const select = (ticker) => {
   if (selectedTicker.value === ticker) {
     selectedTicker.value = ''
-  } else selectedTicker.value = ticker
+  } else {
+    selectedTicker.value = ticker
+  }
 }
 
 const handleDelete = (tickerToRemove) => {
@@ -324,10 +338,10 @@ const getSavedTickers = () => {
   }
 }
 
-const updateTicker = (tickerName, newPrice, state) => {
+const updateTicker = (tickerName, newPrice, status) => {
   const currentTicker = tickers.value.find((t) => t.name === tickerName)
 
-  if (state === 'ERROR') {
+  if (status === 'ERROR') {
     wrongTickers.value.push(currentTicker)
     currentTicker.price = 'Нет данных'
     return
@@ -336,6 +350,12 @@ const updateTicker = (tickerName, newPrice, state) => {
   currentTicker.price = newPrice
   if (currentTicker == selectedTicker.value) {
     graph.value.push(newPrice)
+    if (graphEl.value) {
+      if (graph.value.length > mapGraphEl.value) {
+        const amountToDelete = graph.value.length - mapGraphEl.value
+        graph.value.splice(0, amountToDelete)
+      }
+    }
   }
 }
 
@@ -354,6 +374,21 @@ const getPreviousState = () => {
   })
 }
 
+const calculateGraphBarAmount = (): void => {
+  if (!graphEl.value) {
+    return
+  }
+  mapGraphEl.value = Math.floor(graphEl.value.clientWidth / 38)
+}
+
+onMounted(() => {
+  window.addEventListener('resize', calculateGraphBarAmount)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', calculateGraphBarAmount)
+})
+
 watch(paginatedTickers, () => {
   // console.log('Changed pg', paginatedTickers)
   if (paginatedTickers.value.length === 0 && currentPage.value > 1) {
@@ -362,6 +397,9 @@ watch(paginatedTickers, () => {
 })
 
 watch(selectedTicker, () => {
+  nextTick().then(() => {
+    calculateGraphBarAmount()
+  })
   graph.value = []
 })
 
