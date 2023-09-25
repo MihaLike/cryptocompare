@@ -84,9 +84,10 @@ ws.addEventListener('message', (e) => {
   }
 
   const handlers = tickersHandlers.get(currency) ?? []
-  handlers.forEach((fn) => fn(currency, newPrice, errorState))
+  const newPriceFormatted = newPrice > 1 ? newPrice.toFixed(2) : newPrice.toPrecision(2)
+  handlers.forEach((fn) => fn(currency, newPriceFormatted, errorState))
   // bc channel
-  bc.postMessage({ currency, newPrice, errorState })
+  bc.postMessage({ currency, newPriceFormatted, errorState })
 })
 // }
 

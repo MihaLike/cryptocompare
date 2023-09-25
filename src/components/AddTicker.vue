@@ -59,7 +59,10 @@ const props = defineProps({
 
 const { tickers } = toRefs(props)
 
-const emits = defineEmits(['tickerAdded'])
+// const emits = defineEmits(['tickerAdded'])
+const emits = defineEmits<{
+  (e: 'tickerAdded'): Ticker
+}>()
 
 // All coins list
 const coinsListData = ref(null)
@@ -91,7 +94,7 @@ const chooseHelper = (helper) => {
 
 // Add ticker
 const addTicker = () => {
-  const currentTicker = {
+  const currentTicker: Ticker = {
     name: ticker.value.toUpperCase(),
     price: '-'
   }

@@ -3,13 +3,13 @@
     <button
       class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
       v-if="currentPage > 1"
-      @click="currentPageDecr"
+      @click="currentPageDecrEv"
     >
       Назад
     </button>
     <button
       class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-      @click="currentPageIncr"
+      @click="currentPageIncrEv"
       v-if="hasNextPage"
     >
       Вперед
@@ -19,7 +19,8 @@
 
 <script setup lang="ts">
 import { watch, toRefs } from 'vue'
-import type { Tickers } from '@/types/ticker.ts'
+import { TICKERS_AMOUNT_PER_PAGE } from '@/utils/constants'
+import type { Tickers } from '@/types/ticker'
 import type { PropType } from 'vue'
 
 const props = defineProps({
@@ -36,26 +37,31 @@ const props = defineProps({
     required: true
   }
 })
-const { paginatedTickers, currentPage, hasNextPage } = toRefs(props)
+const { paginatedTickers, hasNextPage } = toRefs(props)
 
-const emits = defineEmits(['currentPageDecr', 'currentPageIncr'])
+const emits = defineEmits<{
+  (e: 'currentPageDecr'): number
+  (e: 'currentPageIncr'): number
+}>()
 
-const currentPageIncr = () => {
-  emits('currentPageIncr')
+const currentPageIncrEv = () => {
+  emits('currentPageIncr', props.currentPage + 1)
 }
 
-const currentPageDecr = () => {
-  emits('currentPageDecr')
+const currentPageDecrEv = () => {
+  emits('currentPageDecr', props.currentPage - 1)
 }
+
+// const lastPage = computed(() => )
 
 watch(
   () => paginatedTickers,
   () => {
-    if (paginatedTickers.value.length === 0 && currentPage.value > 1) {
-      emits('currentPageDecr')
+    if (paginatedTickers.value.length === 0 && props.currentPage > 1) {
+      currentPageDecrEv()
     }
-    if (hasNextPage.value) {
-      emits('currentPageIncr')
+    if (paginatedTickers.value.length > TICKERS_AMOUNT_PER_PAGE && hasNextPage.value) {
+      currentPageIncrEv()
     }
   },
   { deep: true }
