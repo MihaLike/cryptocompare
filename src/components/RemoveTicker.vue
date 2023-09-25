@@ -21,22 +21,23 @@
 </template>
 
 <script setup lang="ts">
-import type { Ticker } from '@/types/ticker.ts'
+import type { PropType } from 'vue'
+import type { Ticker } from '@/types/ticker'
 
 const props = defineProps({
   tickerToRemove: {
-    required: true,
-    type: Object as Ticker
+    type: Object as PropType<Ticker>,
+    required: true
   }
 })
 
-// const emits = defineEmits<{
-//  ( e: 'tickerDeleted'): Ticker
-// }>()
-
 const emits = defineEmits<{
-  tickerDeleted: Ticker
+  (e: 'tickerDeleted', tickerToRemove: Ticker): void
 }>()
+
+// const emits = defineEmits<{
+//   tickerDeleted: Ticker
+// }>()
 
 const deleteTicker = () => {
   emits('tickerDeleted', props.tickerToRemove)

@@ -45,7 +45,7 @@
 import { computed, toRefs, ref } from 'vue'
 import AddButton from '@/components/AddButton.vue'
 import { loadCoinsList } from '@/composables/api'
-import type { Tickers, Ticker } from '@/types/ticker.ts'
+import type { Tickers, Ticker } from '@/types/ticker'
 import type { PropType } from 'vue'
 
 const ticker = ref('')
@@ -59,9 +59,8 @@ const props = defineProps({
 
 const { tickers } = toRefs(props)
 
-// const emits = defineEmits(['tickerAdded'])
 const emits = defineEmits<{
-  (e: 'tickerAdded'): Ticker
+  (e: 'tickerAdded', newTicker: Ticker): void
 }>()
 
 // All coins list
@@ -88,7 +87,7 @@ const filteredCoinsList = computed(() => {
 
 const last4FilteredCoins = computed(() => filteredCoinsList.value.slice(0, 4))
 // Helpers
-const chooseHelper = (helper) => {
+const chooseHelper = (helper: string) => {
   ticker.value = helper
 }
 

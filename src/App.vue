@@ -10,10 +10,11 @@
         <hr class="w-full border-t border-gray-600 my-4" />
         <base-pagination
           :paginated-tickers="paginatedTickers"
+          :total-tickers-amount="tickersAmount"
           :has-next-page="hasNextPage"
           :current-page="currentPage"
-          @current-page-incr="(e: number) => (currentPage = e)"
-          @current-page-decr="(e: number) => (currentPage = e)"
+          @current-page-incr="(newPage) => (currentPage = newPage)"
+          @current-page-decr="(newPage) => (currentPage = newPage)"
         />
         <div>
           <label
@@ -81,14 +82,14 @@ import AddTicker from '@/components/AddTicker.vue'
 import RemoveTicker from '@/components/RemoveTicker.vue'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseGraph from '@/components/BaseGraph.vue'
-import { computed, Ref, ref, watch, nextTick } from 'vue'
+import { computed, Ref, ref, watch } from 'vue'
 import { VALID_KEYS, TICKERS_AMOUNT_PER_PAGE } from '@/utils/constants'
 import { subscribeUpdateTickerPrice, unsubscribeUpdateTickerPrice } from '@/composables/api'
 import type { Tickers, Ticker } from '@/types/ticker'
 // State
 const tickers: Ref<Tickers> = ref([])
 const selectedTicker: null | Ticker = ref(null)
-const wrongTickers = ref([])
+const wrongTickers: Ref<Tickers> = ref([])
 const graph = ref([])
 const updatedGraphPrice = ref(0)
 const filter = ref('')
@@ -112,6 +113,7 @@ const paginatedTickers = computed(() =>
 )
 const hasNextPage = computed(() => filteredTickers.value.length > endIndex.value)
 
+const tickersAmount = computed(() => tickers.value.length)
 // Methods
 const select = (ticker: Ticker) => {
   if (selectedTicker.value === ticker) {
@@ -162,8 +164,7 @@ const updateTicker = (tickerName: string, newPrice: number, status: string) => {
 }
 
 const getPreviousState = () => {
-  const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
-
+  const windowData = Object.fromEntries(new URL(window.location.href).searchParams.entries())
   VALID_KEYS.forEach((key) => {
     if (windowData[key]) {
       if (key === 'filter') {

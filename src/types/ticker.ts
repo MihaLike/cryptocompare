@@ -1,6 +1,6 @@
 type Ticker = {
   name: string
-  price: number
+  price: number | string
 }
 
 interface Tickers extends Array<Ticker> {}
