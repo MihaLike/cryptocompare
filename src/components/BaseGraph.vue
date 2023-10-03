@@ -4,7 +4,7 @@
       {{ selectedTicker.name }} - USD
     </h3>
     <div
-      class="flex items-end border-gray-600 border-b border-l h-64"
+      class="flex items-end border-gray-600 border-b border-l h-64 my-2"
       ref="graphEl"
     >
       <div
@@ -45,17 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  PropType,
-  ref,
-  Ref,
-  toRefs,
-  watch,
-  nextTick,
-  onMounted,
-  onBeforeUnmount
-} from 'vue'
+import { computed, ref, toRefs, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import type { Ref, PropType } from 'vue'
 import type { Ticker } from '@/types/ticker'
 
 const graph: Ref<Array<number>> | [] = ref([])
@@ -103,12 +94,16 @@ const calculateGraphBarAmount = (): void => {
   mapGraphEl.value = Math.floor(graphEl.value.clientWidth / 38)
 }
 
-watch(selectedTicker, () => {
-  nextTick().then(() => {
-    calculateGraphBarAmount()
-  })
-  graph.value = []
-})
+watch(
+  selectedTicker,
+  () => {
+    nextTick().then(() => {
+      calculateGraphBarAmount()
+    })
+    graph.value = []
+  },
+  { deep: true }
+)
 
 watch(newPrice, () => {
   graph.value.push(newPrice.value)

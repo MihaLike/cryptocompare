@@ -34,16 +34,18 @@
             v-for="t in paginatedTickers"
             :key="t.name"
             @click="select(t)"
-            class="flex flex-col justify-between bg-white overflow-hidden shadow rounded-lg cursor-pointer"
+            class="flex flex-col justify-between overflow-hidden shadow rounded-lg cursor-pointer"
             :class="{
-              'outline outline-purple-800': selectedTicker === t,
+              'outline outline-purple-800': selectedTicker.name === t.name,
+              'bg-white': !wrongTickers?.find((wt) => wt === t),
               'bg-red-500': wrongTickers?.find((wt) => wt === t)
             }"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt
-                class="text-sm font-medium text-gray-500 truncate"
+                class="text-sm font-medium truncate"
                 :class="{
+                  'text-gray-500': !wrongTickers?.find((wt) => wt === t),
                   'text-black': wrongTickers?.find((wt) => wt === t)
                 }"
               >
@@ -67,13 +69,42 @@
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
       <base-graph
-        v-if="selectedTicker"
+        v-if="selectedTicker.name"
         :selected-ticker="selectedTicker"
-        :graph="graph"
         :new-price="updatedGraphPrice"
-        @clear-selected-ticker="selectedTicker = null"
+        @clear-selected-ticker="clearSelectedTicker"
       />
     </div>
+    <button
+      class="h-10 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+      @click="modalStatus = true"
+    >
+      Открыть модалку
+    </button>
+    <base-modal
+      v-if="modalStatus"
+      :show-modal="modalStatus"
+      @close-modal="modalStatus = false"
+    >
+      <template #confirmation="{ closeModal: closeModal }">
+        <input
+          type="text"
+          class="block w-48 pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md w-20"
+          placeholder="Введите: ok"
+          v-model="confirmation"
+          @keydown.enter="closeModal()"
+        />
+        <button
+          type="button"
+          class="h-10 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          @click="closeModal()"
+          :disabled="btnDisabled"
+          :class="{ 'opacity-50 cursor-not-allowed': btnDisabled }"
+        >
+          Закрыть
+        </button>
+      </template>
+    </base-modal>
   </div>
 </template>
 
@@ -82,19 +113,37 @@ import AddTicker from '@/components/AddTicker.vue'
 import RemoveTicker from '@/components/RemoveTicker.vue'
 import BasePagination from '@/components/BasePagination.vue'
 import BaseGraph from '@/components/BaseGraph.vue'
-import { computed, Ref, ref, watch } from 'vue'
+import BaseModal from '@/components/BaseModal.vue'
+import { computed, ref, watch } from 'vue'
+import type { Ref } from 'vue'
 import { VALID_KEYS, TICKERS_AMOUNT_PER_PAGE } from '@/utils/constants'
-import { subscribeUpdateTickerPrice, unsubscribeUpdateTickerPrice } from '@/composables/api'
+import { subscribeUpdateTickerPrice, unsubscribeUpdateTickerPrice } from '@/composables/useApi'
 import type { Tickers, Ticker } from '@/types/ticker'
 // State
 const tickers: Ref<Tickers> = ref([])
-const selectedTicker: null | Ticker = ref(null)
+const selectedTicker = ref({} as Ticker)
 const wrongTickers: Ref<Tickers> = ref([])
-const graph = ref([])
 const updatedGraphPrice = ref(0)
 const filter = ref('')
 const currentPage = ref(1)
 
+// Modal
+const modalStatus = ref(false)
+const confirmation = ref('')
+const btnDisabled = ref(true)
+watch(confirmation, () => {
+  if (confirmation.value === 'ok') {
+    btnDisabled.value = false
+  } else {
+    btnDisabled.value = true
+  }
+})
+watch(modalStatus, () => {
+  if (modalStatus.value) {
+    confirmation.value = ''
+  }
+})
+//
 // Computed
 const pageStateOptions = computed(() => {
   return {
@@ -116,19 +165,25 @@ const hasNextPage = computed(() => filteredTickers.value.length > endIndex.value
 const tickersAmount = computed(() => tickers.value.length)
 // Methods
 const select = (ticker: Ticker) => {
-  if (selectedTicker.value === ticker) {
-    selectedTicker.value = ''
+  if (selectedTicker.value.name === ticker.name) {
+    clearSelectedTicker()
   } else {
-    selectedTicker.value = ticker
+    selectedTicker.value.name = ticker.name
+    selectedTicker.value.price = ticker.price
   }
 }
 
 const handleDelete = (tickerToRemove: Ticker) => {
   tickers.value = tickers.value.filter((t) => t !== tickerToRemove)
-  if (selectedTicker.value === tickerToRemove) {
-    selectedTicker.value = null
+  if (selectedTicker.value.name === tickerToRemove.name) {
+    clearSelectedTicker()
   }
   unsubscribeUpdateTickerPrice(tickerToRemove)
+}
+
+const clearSelectedTicker = () => {
+  selectedTicker.value.name = ''
+  selectedTicker.value.price = 0
 }
 
 const getSavedTickers = () => {
@@ -158,7 +213,7 @@ const updateTicker = (tickerName: string, newPrice: number, status: string) => {
   }
 
   currentTicker.price = newPrice
-  if (currentTicker == selectedTicker.value) {
+  if (currentTicker.name == selectedTicker.value.name) {
     updatedGraphPrice.value = newPrice
   }
 }

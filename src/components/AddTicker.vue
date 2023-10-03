@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { computed, toRefs, ref } from 'vue'
 import AddButton from '@/components/AddButton.vue'
-import { loadCoinsList } from '@/composables/api'
+import { loadCoinsList } from '@/composables/useApi'
 import type { Tickers, Ticker } from '@/types/ticker'
 import type { PropType } from 'vue'
 
