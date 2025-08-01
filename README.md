@@ -5,7 +5,7 @@ CryptoCurrency price checker, with graph, filtration, pagination.
 
 State is saving to your localStorage.
 
-Watch project live : happyhidra.github.io/cryptocompare/
+Watch project live : mihalike.github.io/cryptocompare/
 ## Project Setup
 
 ```sh
